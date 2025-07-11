@@ -7,7 +7,7 @@ const userSchema  = new mongoose.Schema(
             required: true,
             unique: true
         },
-        fullName: {
+        name: {
             type: String,
             required: true,
         },
@@ -19,7 +19,19 @@ const userSchema  = new mongoose.Schema(
         profilePic: {
             type: String,
             default: ""
-        }
+        },
+        lastLogin: {
+            type: Date,
+            default: Date.now()
+        },
+        isVerified: {
+            type: Boolean,
+            default: false
+        },
+        resetPasswordToken: String,
+		resetPasswordExpiresAt: Date,
+		verificationToken: String,
+		verificationTokenExpiresAt: Date,
         
     },
     {timestamps: true}

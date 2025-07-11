@@ -1,11 +1,12 @@
 import { genereateToken } from "../lib/utils.js"
 import User from "../routes/models/user.model.js"
+import { sendVerificationEmail } from "../../mailtrap/emails.js"
 import bcrypt from "bcryptjs"
 export const signup = async (req, res) => {
-    const {fullName, email, password} = req.body
+    const {name, email, password} = req.body
     try {
         // Hashing password
-        if(!fullName || !password || !email){
+        if(!name || !password || !email){
             res.status(400).json({message: "All fields are required"})
         }
         if(password.length < 6){
@@ -16,30 +17,30 @@ export const signup = async (req, res) => {
 
         if(user) return res.status(400).json({message: "Email already exists"});
 
-        const salt = await bcrypt.genSalt(10)
-        const hashedPassword = await bcrypt.hash(password, salt)
+        const hashedPassword = await bcrypt.hash(password, 10)
+
+        const verificationToken = Math.floor(100000 + Math.random() * 900000).toString()
 
         const newUser = new User({
-            fullName,
+            name,
             email,
-            password: hashedPassword
+            password: hashedPassword,
+            verificationToken: verificationToken,
+            verificationTokenExpiresAt: Date.now() + 24 * 60 * 60 * 1000,
         })
+        await newUser.save()
+        // Generate jwt token here
+        genereateToken(newUser._id, res)
 
-        if(newUser){
-            // Generate jwt token here
-            genereateToken(newUser._id, res)
-            await newUser.save()
+        await sendVerificationEmail(newUser.email, verificationToken)
 
-            res.status(201).json({
-                _id: newUser._id,
-                email: newUser.email,
-                fullName: newUser.fullName,
-                profilePic: newUser.profilePic
-            })
-        } else {
-            res.status(400).json({message: "User not found"})
-
-        }
+        res.status(201).json({
+            success: true,
+            user: {
+                ...newUser._doc,
+                password: undefined
+            }
+        })
     } catch (error) {
         console.log("Eroror in signup controller: ", error.message)
         res.status(500).json({message: "Internal Server Error"})
@@ -57,7 +58,7 @@ export const login = async (req, res) => {
         res.status(200).json({
             _id: user._id,
             email: user.email,
-            fullName: user.fullName,
+            name: user.name,
             profilePic: user.profilePic
         })
     } catch (error) {
