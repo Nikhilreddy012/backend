@@ -2,7 +2,7 @@ import bcrypt from "bcryptjs"
 import crypto from "crypto"
 
 import { genereateToken } from "../lib/utils.js"
-import User from "../routes/models/user.model.js"
+import User from "../models/user.model.js"
 import { sendVerificationEmail, sendWelcomeEmail, sendPasswordResetEmail, sendResetSuccessEmail } from "../../mailtrap/emails.js"
 
 
