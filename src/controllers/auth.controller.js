@@ -3,7 +3,7 @@ import crypto from "crypto"
 
 import { genereateToken } from "../lib/utils.js"
 import User from "../routes/models/user.model.js"
-import { sendVerificationEmail } from "../../mailtrap/emails.js"
+import { sendVerificationEmail, sendWelcomeEmail, sendPasswordResetEmail, sendResetSuccessEmail } from "../../mailtrap/emails.js"
 
 
 export const signup = async (req, res) => {
@@ -70,6 +70,7 @@ export const verifyEmail = async (req, res) => {
         user.verificationTokenExpiresAt = undefined
 
         await user.save()
+        await sendWelcomeEmail(user.email, user.name)
         res.status(200).json({
             success: true,
             message: "Verified email successfully",
@@ -95,6 +96,8 @@ export const login = async (req, res) => {
         const isPasswordCorrect = await bcrypt.compare(password, user.password)
         if(!isPasswordCorrect) return res.status(400).json({message: "Incorrect Password"});
         genereateToken(user._id, res)
+        user.lastLogin = new Date()
+        await user.save()
         res.status(200).json({
             _id: user._id,
             email: user.email,
@@ -109,9 +112,7 @@ export const login = async (req, res) => {
 
 export const logout = (req, res) => {
     try {
-    res.cookie('jwt', "", {
-        maxAge: 0
-    })
+    res.clearCookie("token")
     res.status(200).json({ message: "Logged out successfully"})
     } catch (error) {
         console.log("Eroror in logout controller: ", error.message)
@@ -152,7 +153,10 @@ export const forgotPassword = async (req, res) => {
 export const resetPassword = async (req, res) => {
     try {
         const {token} = req.params
+        console.log('token', token)
         const { password } = req.body
+        console.log('password', password)
+
         const user = await User.findOne({
             resetPasswordToken: token,
             resetPasswordExpiresAt: {
@@ -164,7 +168,7 @@ export const resetPassword = async (req, res) => {
 		    return res.status(400).json({ success: false, message: "Invalid or expired reset token" });
 		}
 
-        const hashedPassword = bcrypt.hash(password, 10)
+        const hashedPassword = await bcrypt.hash(password, 10)
 
         user.password = hashedPassword
         user.resetPasswordToken = undefined
@@ -183,3 +187,17 @@ export const resetPassword = async (req, res) => {
 		res.status(400).json({ success: false, message: error.message });
     }
 }
+
+export const checkAuth = async (req, res) => {
+	try {
+		const user = await User.findById(req.userId).select("-password");
+		if (!user) {
+			return res.status(400).json({ success: false, message: "User not found" });
+		}
+
+		res.status(200).json({ success: true, user });
+	} catch (error) {
+		console.log("Error in checkAuth ", error);
+		res.status(400).json({ success: false, message: error.message });
+	}
+};

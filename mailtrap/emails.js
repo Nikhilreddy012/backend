@@ -58,3 +58,23 @@ export const sendResetSuccessEmail = async (email) => {
         throw new Error(`Error sending password reset success email: ${error}`)
     }
 }
+
+export const sendWelcomeEmail = async (email, name) => {
+    const recepient =  [{email}]
+    try {
+        const res = await mailTrapClient.send({
+            from: sender,
+            to: recepient,
+            template_uuid: "f1448ad4-e4cd-4f81-8f82-2f99ba960ce8",
+            template_variables: {
+                "company_info_name": "Chat_App",
+                "name": name,
+            }
+        })
+
+        console.log("Welcome email sent successfully", res)
+    } catch (error) {
+        console.error("Error in sending Welcome email", error)
+        throw new Error(`Error in sending welcome email: ${error}`)
+    }
+}
